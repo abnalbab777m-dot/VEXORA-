@@ -70,6 +70,16 @@ export class AdminController {
     res.status(500).json({ success: false, data: null, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
 
+  testTelegramNotification = async (req: Request, res: Response) => {
+    try {
+      const { telegramService } = await import('../services/telegramService');
+      const data = await telegramService.sendMessage("🔔 اختبار ناجح: بوت نكسورا متصل بلوحة التحكم بنجاح");
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_ERROR', message: error.message } });
+    }
+  }
+
   getDashboardStats = async (req: Request, res: Response) => {
     try {
       const stats = await adminService.getDashboardStats();

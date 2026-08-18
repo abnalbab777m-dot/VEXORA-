@@ -11,6 +11,26 @@ export function AdminSettings() {
   const [newStake, setNewStake] = useState('');
   const [selectedGame, setSelectedGame] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramStatus, setTelegramStatus] = useState<{success: boolean, message: string} | null>(null);
+
+  const testTelegram = async () => {
+    setTelegramLoading(true);
+    setTelegramStatus(null);
+    try {
+      const res = await fetch('/api/admin/test-telegram', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setTelegramStatus({ success: true, message: 'Notification sent successfully!' });
+      } else {
+        setTelegramStatus({ success: false, message: data.error?.message || 'Failed to send notification' });
+      }
+    } catch (err: any) {
+      setTelegramStatus({ success: false, message: err.message || 'Network error' });
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchGames();
@@ -84,6 +104,32 @@ export function AdminSettings() {
         <div>
           <h1 className="text-3xl font-bold font-display tracking-tight text-white">Betting Settings</h1>
           <p className="text-gray-400 mt-1">Manage allowed stakes and betting configurations</p>
+        </div>
+      </div>
+
+      <div className="bg-[#0F1624] border border-white/10 rounded-2xl p-6 mb-8">
+        <h2 className="text-xl font-bold mb-4">Integrations</h2>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between p-4 bg-[#131A2A] rounded-lg border border-white/5">
+            <div>
+              <p className="font-bold text-white mb-1">Telegram Notifications</p>
+              <p className="text-sm text-gray-400">Test if your Telegram bot is properly configured and can send messages.</p>
+            </div>
+            <button
+              onClick={testTelegram}
+              disabled={telegramLoading}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg font-bold transition-colors flex items-center gap-2"
+            >
+              {telegramLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Send Test Notification
+            </button>
+          </div>
+          {telegramStatus && (
+            <div className={`p-4 rounded-lg flex items-center gap-2 ${telegramStatus.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {telegramStatus.success ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <XCircle className="w-5 h-5 flex-shrink-0" />}
+              <p>{telegramStatus.message}</p>
+            </div>
+          )}
         </div>
       </div>
 

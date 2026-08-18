@@ -10,6 +10,7 @@ router.use(requireAdmin);
 
 // Dashboard
 router.get('/dashboard', adminController.getDashboardStats);
+router.post('/test-telegram', adminController.testTelegramNotification);
 
 // Users
 router.get('/users', adminController.getUsers);
