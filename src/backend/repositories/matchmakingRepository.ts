@@ -1,7 +1,7 @@
 import { hasDatabase } from '../../db/index';
 import { db } from '../../db';
 import { matchmakingQueue } from '../../db/schema';
-import { eq, and, asc, sql } from 'drizzle-orm';
+import { eq, and, asc, sql, ne } from 'drizzle-orm';
 
 export class MatchmakingRepository {
   async create(data: typeof matchmakingQueue.$inferInsert, tx?: any) {
@@ -45,7 +45,7 @@ export class MatchmakingRepository {
         eq(matchmakingQueue.gameId, gameId),
         eq(matchmakingQueue.stakeId, stakeId),
         eq(matchmakingQueue.status, 'WAITING'),
-        sql`${matchmakingQueue.userId} != ${excludeUserId}`
+        ne(matchmakingQueue.userId, excludeUserId)
       ))
       .orderBy(asc(matchmakingQueue.createdAt))
       .for('update')
@@ -59,7 +59,7 @@ export class MatchmakingRepository {
       .from(matchmakingQueue)
       .where(and(
         eq(matchmakingQueue.status, 'WAITING'),
-        sql`${matchmakingQueue.userId} != ${excludeUserId}`
+        ne(matchmakingQueue.userId, excludeUserId)
       ))
       .orderBy(asc(matchmakingQueue.createdAt));
   }

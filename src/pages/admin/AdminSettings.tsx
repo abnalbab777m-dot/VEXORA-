@@ -13,6 +13,50 @@ export function AdminSettings() {
   const [actionLoading, setActionLoading] = useState(false);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<{success: boolean, message: string} | null>(null);
+  
+  const [botToken, setBotToken] = useState('');
+  const [chatId, setChatId] = useState('');
+  const [savingTelegram, setSavingTelegram] = useState(false);
+
+  useEffect(() => {
+    fetchGames();
+    fetchTelegramSettings();
+  }, []);
+
+  const fetchTelegramSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/telegram-settings');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setBotToken(data.data.botToken || '');
+        setChatId(data.data.chatId || '');
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const saveTelegramSettings = async () => {
+    setSavingTelegram(true);
+    setTelegramStatus(null);
+    try {
+      const res = await fetch('/api/admin/telegram-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botToken, chatId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTelegramStatus({ success: true, message: 'Settings saved successfully!' });
+      } else {
+        setTelegramStatus({ success: false, message: data.error?.message || 'Failed to save' });
+      }
+    } catch(err: any) {
+      setTelegramStatus({ success: false, message: err.message || 'Network error' });
+    } finally {
+      setSavingTelegram(false);
+    }
+  };
 
   const testTelegram = async () => {
     setTelegramLoading(true);
@@ -31,10 +75,6 @@ export function AdminSettings() {
       setTelegramLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchGames();
-  }, []);
 
   const fetchGames = async () => {
     try {
@@ -109,21 +149,56 @@ export function AdminSettings() {
 
       <div className="bg-[#0F1624] border border-white/10 rounded-2xl p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Integrations</h2>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between p-4 bg-[#131A2A] rounded-lg border border-white/5">
-            <div>
+        <div className="flex flex-col gap-6">
+          <div className="p-4 bg-[#131A2A] rounded-lg border border-white/5">
+            <div className="mb-4">
               <p className="font-bold text-white mb-1">Telegram Notifications</p>
-              <p className="text-sm text-gray-400">Test if your Telegram bot is properly configured and can send messages.</p>
+              <p className="text-sm text-gray-400">Configure your Telegram bot token and chat ID to receive notifications.</p>
             </div>
-            <button
-              onClick={testTelegram}
-              disabled={telegramLoading}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg font-bold transition-colors flex items-center gap-2"
-            >
-              {telegramLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Send Test Notification
-            </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-1">Bot Token</label>
+                <input
+                  type="text"
+                  value={botToken}
+                  onChange={(e) => setBotToken(e.target.value)}
+                  placeholder="123456789:ABCDEF..."
+                  className="w-full bg-[#0F1624] border border-white/10 rounded-lg px-4 py-2 focus:border-[#6C5CE7] outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-1">Chat ID</label>
+                <input
+                  type="text"
+                  value={chatId}
+                  onChange={(e) => setChatId(e.target.value)}
+                  placeholder="-100123456789"
+                  className="w-full bg-[#0F1624] border border-white/10 rounded-lg px-4 py-2 focus:border-[#6C5CE7] outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={saveTelegramSettings}
+                disabled={savingTelegram}
+                className="px-6 py-2 bg-[#6C5CE7] hover:bg-[#5a4cd1] disabled:opacity-50 rounded-lg font-bold transition-colors flex items-center gap-2"
+              >
+                {savingTelegram ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Save Settings
+              </button>
+              <button
+                onClick={testTelegram}
+                disabled={telegramLoading || !botToken || !chatId}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg font-bold transition-colors flex items-center gap-2"
+              >
+                {telegramLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Test Bot
+              </button>
+            </div>
           </div>
+
           {telegramStatus && (
             <div className={`p-4 rounded-lg flex items-center gap-2 ${telegramStatus.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
               {telegramStatus.success ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <XCircle className="w-5 h-5 flex-shrink-0" />}

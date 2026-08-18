@@ -70,6 +70,27 @@ export class AdminController {
     res.status(500).json({ success: false, data: null, error: { code: 'INTERNAL_ERROR', message: error.message } });
   }
 
+  getTelegramSettings = async (req: Request, res: Response) => {
+    try {
+      const { telegramService } = await import('../services/telegramService');
+      const settings = await telegramService.getSettings();
+      res.json({ success: true, data: settings });
+    } catch (error: any) {
+      res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_ERROR', message: error.message } });
+    }
+  }
+
+  saveTelegramSettings = async (req: Request, res: Response) => {
+    try {
+      const { botToken, chatId } = req.body;
+      const { telegramService } = await import('../services/telegramService');
+      await telegramService.saveSettings(botToken || '', chatId || '');
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_ERROR', message: error.message } });
+    }
+  }
+
   testTelegramNotification = async (req: Request, res: Response) => {
     try {
       const { telegramService } = await import('../services/telegramService');

@@ -1,42 +1,55 @@
+import axios from 'axios';
+import { db } from '../../db';
+import { appSettings } from '../../db/schema';
+import { eq } from 'drizzle-orm';
+
 export class TelegramService {
-  get botToken() {
-    return process.env.TELEGRAM_BOT_TOKEN;
+  async getSettings() {
+    let botToken = process.env.TELEGRAM_BOT_TOKEN;
+    let chatId = process.env.TELEGRAM_CHAT_ID;
+
+    try {
+      const dbToken = await db.query.appSettings.findFirst({ where: eq(appSettings.key, 'telegram_bot_token') });
+      const dbChat = await db.query.appSettings.findFirst({ where: eq(appSettings.key, 'telegram_chat_id') });
+      if (dbToken?.value) botToken = dbToken.value;
+      if (dbChat?.value) chatId = dbChat.value;
+    } catch (err) {
+      console.error('Error fetching telegram settings from DB', err);
+    }
+    return { botToken, chatId };
   }
-  get chatId() {
-    return process.env.TELEGRAM_CHAT_ID;
+
+  async saveSettings(botToken: string, chatId: string) {
+    await db.insert(appSettings).values({ key: 'telegram_bot_token', value: botToken })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value: botToken, updatedAt: new Date() } });
+    await db.insert(appSettings).values({ key: 'telegram_chat_id', value: chatId })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value: chatId, updatedAt: new Date() } });
   }
 
   async sendMessage(text: string) {
-    if (!this.botToken || !this.chatId) {
+    const { botToken, chatId } = await this.getSettings();
+    if (!botToken || !chatId) {
       console.warn('Telegram BOT_TOKEN or CHAT_ID is not configured.');
       throw new Error('Telegram is not configured. Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.');
     }
 
     try {
-      const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: this.chatId,
-          text: text,
-        }),
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const response = await axios.post(url, {
+        chat_id: chatId,
+        text: text,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-         console.error('Telegram API Response Error:', data);
-         throw new Error(`Telegram Error: ${data.description || 'Unknown API Error'}`);
-      }
-      
-      console.log('Telegram message sent successfully:', data.result?.message_id);
-      return data;
+      console.log('Telegram message sent successfully:', response.data.result?.message_id);
+      return response.data;
     } catch (error: any) {
-      console.error('Telegram Service Error:', error.message);
-      throw error;
+      if (error.response) {
+         console.error('Telegram API Response Error:', error.response.data);
+         throw new Error(`Telegram Error: ${error.response.data.description || 'Unknown API Error'}`);
+      } else {
+         console.error('Telegram Service Error:', error.message);
+         throw error;
+      }
     }
   }
 }
