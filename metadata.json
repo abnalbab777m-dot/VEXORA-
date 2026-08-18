@@ -1,0 +1,6 @@
+{
+  "name": "VEXORA",
+  "description": "VEXORA is a premier competitive gaming platform allowing players to compete in head-to-head matches and tournaments in games like eFootball and Jawaker, featuring real stakes, skill-based matchmaking, leaderboards, and an integrated wallet system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

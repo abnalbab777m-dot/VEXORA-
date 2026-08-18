@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: #070B14;
+  --color-bg-card: #0F1624;
+  --color-primary: #6C5CE7;
+  --color-secondary: #00D4FF;
+  --color-success: #22C55E;
+  --color-danger: #EF4444;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-bg-base)] text-white font-sans antialiased;
+  }
+}

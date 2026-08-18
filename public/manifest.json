@@ -1,0 +1,17 @@
+{
+  "name": "VEXORA - Competitive Gaming Platform",
+  "short_name": "VEXORA",
+  "description": "Play. Compete. Win. The premier competitive platform for eFootball and Jawaker.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070B14",
+  "theme_color": "#6C5CE7",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

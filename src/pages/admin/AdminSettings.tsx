@@ -1,0 +1,151 @@
+import { useState, useEffect } from 'react';
+import { Loader2, Plus, Settings, CheckCircle2, XCircle } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { AdminNavigation } from '../../components/AdminNavigation';
+
+export function AdminSettings() {
+    const [games, setGames] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [newStake, setNewStake] = useState('');
+  const [selectedGame, setSelectedGame] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchGames();
+  }, []);
+
+  const fetchGames = async () => {
+    try {
+      const res = await fetch('/api/games');
+      const data = await res.json();
+      if (data.success) {
+        setGames(data.data);
+      }
+    } catch (err) {
+      setError('Failed to load games');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addStake = async () => {
+    if (!newStake || !selectedGame) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/admin/stakes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          },
+        body: JSON.stringify({ gameId: selectedGame, amount: newStake })
+      });
+      if (res.ok) {
+        setNewStake('');
+        fetchGames();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const toggleStakeStatus = async (stakeId: string, currentStatus: string) => {
+    if (!window.confirm('Are you sure you want to toggle this stake?')) return;
+    try {
+      await fetch(`/api/admin/stakes/${stakeId}/toggle`, {
+        method: 'POST',
+        
+      });
+      fetchGames();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col pt-24 items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#6C5CE7] mb-4" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 pt-24 px-4 pb-12 max-w-7xl mx-auto w-full">
+      <AdminNavigation />
+      
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-12 h-12 rounded-xl bg-[#6C5CE7]/20 flex items-center justify-center">
+          <Settings className="w-6 h-6 text-[#6C5CE7]" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold font-display tracking-tight text-white">Betting Settings</h1>
+          <p className="text-gray-400 mt-1">Manage allowed stakes and betting configurations</p>
+        </div>
+      </div>
+
+      <div className="bg-[#0F1624] border border-white/10 rounded-2xl p-6 mb-8">
+        <h2 className="text-xl font-bold mb-4">Add New Stake</h2>
+        <div className="flex flex-wrap gap-4">
+          <select 
+            value={selectedGame} 
+            onChange={e => setSelectedGame(e.target.value)}
+            className="bg-[#131A2A] border border-white/10 rounded-lg px-4 py-2 focus:border-[#6C5CE7] outline-none"
+          >
+            <option value="">Select Game</option>
+            {games.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+          <input 
+            type="number" 
+            placeholder="Amount (USD)" 
+            value={newStake}
+            onChange={e => setNewStake(e.target.value)}
+            className="bg-[#131A2A] border border-white/10 rounded-lg px-4 py-2 focus:border-[#6C5CE7] outline-none"
+          />
+          <button 
+            onClick={addStake}
+            disabled={actionLoading || !selectedGame || !newStake}
+            className="px-6 py-2 bg-[#6C5CE7] hover:bg-[#5a4cd1] disabled:opacity-50 rounded-lg font-bold transition-colors flex items-center gap-2"
+          >
+            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Add Stake
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {games.map(game => (
+          <div key={game.id} className="bg-[#0F1624] border border-white/10 rounded-2xl p-6">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              {game.name} <span className="text-sm font-normal text-gray-400 bg-white/5 px-2 py-1 rounded">Stakes</span>
+            </h3>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {game.stakes.sort((a: any, b: any) => Number(a.amount) - Number(b.amount)).map((stake: any) => (
+                <div key={stake.id} className="bg-[#131A2A] border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3">
+                  <div className="text-2xl font-bold text-[#00D4FF]">${Number(stake.amount).toFixed(2)}</div>
+                  <button 
+                    onClick={() => toggleStakeStatus(stake.id, stake.status)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase w-full flex justify-center items-center gap-1 transition-colors ${
+                      stake.status === 'ACTIVE' 
+                        ? 'bg-[#22C55E]/10 text-[#22C55E] hover:bg-[#22C55E]/20'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    {stake.status === 'ACTIVE' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                    {stake.status}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

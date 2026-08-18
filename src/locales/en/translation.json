@@ -1,0 +1,28 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "games": "Games",
+    "matches": "Matches",
+    "wallet": "Wallet",
+    "admin": "Admin Panel",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "profile": "Profile",
+    "leaderboard": "Leaderboard",
+    "friends": "Friends",
+    "notifications": "Notifications"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "home": {
+    "welcome": "Welcome to Vexora",
+    "playNow": "Play Now",
+    "featuredGames": "Featured Games"
+  }
+}

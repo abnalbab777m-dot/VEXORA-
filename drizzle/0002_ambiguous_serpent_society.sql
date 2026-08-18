@@ -1,0 +1,2 @@
+ALTER TABLE "payment_methods" ADD COLUMN "is_deposit_enabled" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "payment_methods" ADD COLUMN "is_withdrawal_enabled" boolean DEFAULT true NOT NULL;

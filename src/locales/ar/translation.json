@@ -1,0 +1,28 @@
+{
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "games": "الألعاب",
+    "matches": "المباريات",
+    "wallet": "المحفظة",
+    "admin": "لوحة الإدارة",
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "profile": "الملف الشخصي",
+    "leaderboard": "لوحة المتصدرين",
+    "friends": "الأصدقاء",
+    "notifications": "الإشعارات"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد"
+  },
+  "home": {
+    "welcome": "مرحباً بك في Vexora",
+    "playNow": "العب الآن",
+    "featuredGames": "الألعاب المميزة"
+  }
+}
