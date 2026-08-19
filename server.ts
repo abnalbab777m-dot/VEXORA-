@@ -22,13 +22,13 @@ import gameInvitationRoutes from './src/backend/routes/gameInvitationRoutes';
 import friendRoutes from './src/backend/routes/friendRoutes';
 import notificationRoutes from './src/backend/routes/notificationRoutes';
 
-import { initDevDb } from './fix_dev_db';
+import { ensureDatabaseSchema } from './src/db/ensureSchema';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  await initDevDb();
+  await ensureDatabaseSchema();
 
   // Middleware
   const isProd = process.env.NODE_ENV === "production";
