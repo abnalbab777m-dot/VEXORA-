@@ -279,10 +279,11 @@ export function AdminSettings() {
             <div className="relative">
               <input
                 type="text"
+                dir="ltr"
                 value={botToken}
                 onChange={(e) => setBotToken(e.target.value)}
                 placeholder="7123456789:AAHk4..."
-                className="w-full bg-[#131A2A] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9] outline-none transition-colors font-mono text-sm"
+                className="w-full text-left bg-[#131A2A] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9] outline-none transition-colors font-mono text-sm"
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">رمز التوكن الذي تم الحصول عليه من @BotFather</p>
@@ -295,10 +296,11 @@ export function AdminSettings() {
             <div className="relative">
               <input
                 type="text"
+                dir="ltr"
                 value={chatId}
                 onChange={(e) => setChatId(e.target.value)}
                 placeholder="123456789 أو -100123456789"
-                className="w-full bg-[#131A2A] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9] outline-none transition-colors font-mono text-sm"
+                className="w-full text-left bg-[#131A2A] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#229ED9] focus:ring-1 focus:ring-[#229ED9] outline-none transition-colors font-mono text-sm"
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">معرف حسابك الشخصي أو معرف مجموعة المشرفين</p>

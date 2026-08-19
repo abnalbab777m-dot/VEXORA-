@@ -183,6 +183,12 @@ export async function ensureDatabaseSchema() {
         ip_address text,
         created_at timestamp DEFAULT now() NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key text PRIMARY KEY,
+        value text NOT NULL,
+        updated_at timestamp DEFAULT now() NOT NULL
+      );
     `);
 
     // 2. Safely apply column additions on existing tables

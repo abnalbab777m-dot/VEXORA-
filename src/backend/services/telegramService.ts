@@ -25,7 +25,7 @@ export interface TelegramSettings {
 export class TelegramService {
   private cache: { settings: TelegramSettings; expiresAt: number } | null = null;
 
-  // Clean token from common copy-paste errors (e.g., "bot123456:ABC", "https://api.telegram.org/bot...", extra spaces)
+  // Clean token from common copy-paste errors (e.g., "bot123456:ABC", "https://api.telegram.org/bot...", extra spaces, RTL flipped text)
   cleanToken(token?: string): string {
     if (!token) return '';
     let cleaned = token.trim();
@@ -38,13 +38,23 @@ export class TelegramService {
       // User wrote "bot123456:ABC..."
       cleaned = cleaned.substring(3).trim();
     }
+
+    // Remove all whitespace
+    cleaned = cleaned.replace(/\s*:\s*/g, ':').replace(/\s+/g, '');
+
+    // Handle RTL reverse swap where digits are placed after alphanumeric secret (e.g. "secret:1234567890" instead of "1234567890:secret")
+    const reversedRtlMatch = cleaned.match(/^([a-zA-Z0-9_-]{20,}):([0-9]{7,12})$/);
+    if (reversedRtlMatch) {
+      cleaned = `${reversedRtlMatch[2]}:${reversedRtlMatch[1]}`;
+    }
+
     return cleaned;
   }
 
   // Clean chat ID (trim whitespace, preserve '-' for groups/channels and '@' for public channels)
   cleanChatId(chatId?: string): string {
     if (!chatId) return '';
-    return chatId.trim();
+    return chatId.trim().replace(/\s+/g, '');
   }
 
   // Get current settings with fallback from DB to process.env
@@ -137,8 +147,23 @@ export class TelegramService {
     const chat = this.cleanChatId(settings.chatId);
 
     const upsertSetting = async (key: string, value: string) => {
-      await db.insert(appSettings).values({ key, value })
-        .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+      try {
+        await db.insert(appSettings).values({ key, value })
+          .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+      } catch (err) {
+        // Safe manual fallback if constraint name differs or on conflict syntax fails
+        try {
+          const existing = await db.select().from(appSettings).where(eq(appSettings.key, key)).limit(1);
+          if (existing && existing.length > 0) {
+            await db.update(appSettings).set({ value, updatedAt: new Date() }).where(eq(appSettings.key, key));
+          } else {
+            await db.insert(appSettings).values({ key, value });
+          }
+        } catch (innerErr) {
+          console.error(`[TelegramService] Fallback upsert failed for key ${key}:`, innerErr);
+          throw innerErr;
+        }
+      }
     };
 
     if (settings.botToken !== undefined) await upsertSetting('telegram_bot_token', token);
