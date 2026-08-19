@@ -5,6 +5,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: text('username').notNull().unique(),
   gameUsername: text('game_username').notNull().default(''),
+  efootballUsername: text('efootball_username').notNull().default(''),
+  jawakerUsername: text('jawaker_username').notNull().default(''),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: text('role').notNull().default('USER'), // USER or ADMIN

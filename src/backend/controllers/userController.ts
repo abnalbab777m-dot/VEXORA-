@@ -4,7 +4,10 @@ import { z } from 'zod';
 
 const updateProfileSchema = z.object({
   username: z.string().min(3).max(30).optional(),
-  avatar: z.string().url().optional(),
+  avatar: z.string().url().optional().or(z.literal('')),
+  efootballUsername: z.string().min(1, 'eFootball username cannot be empty').optional(),
+  jawakerUsername: z.string().min(1, 'Jawaker username cannot be empty').optional(),
+  gameUsername: z.string().optional(),
 });
 
 const changePasswordSchema = z.object({

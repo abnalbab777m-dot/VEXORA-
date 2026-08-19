@@ -8,9 +8,21 @@ export function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState(user?.username || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [efootballUsername, setEfootballUsername] = useState(user?.efootballUsername || user?.gameUsername || '');
+  const [jawakerUsername, setJawakerUsername] = useState(user?.jawakerUsername || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Sync state if user changes
+  React.useEffect(() => {
+    if (user) {
+      setUsername(user.username || '');
+      setAvatar(user.avatar || '');
+      setEfootballUsername(user.efootballUsername || user.gameUsername || '');
+      setJawakerUsername(user.jawakerUsername || '');
+    }
+  }, [user]);
 
   // Change Password state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -47,8 +59,23 @@ export function Profile() {
   }, [user]);
 
   const handleSave = async () => {
-    if (username === user?.username && avatar === (user?.avatar || '')) {
+    if (
+      username === user?.username && 
+      avatar === (user?.avatar || '') &&
+      efootballUsername === (user?.efootballUsername || user?.gameUsername || '') &&
+      jawakerUsername === (user?.jawakerUsername || '')
+    ) {
       setIsEditing(false);
+      return;
+    }
+
+    if (!efootballUsername.trim()) {
+      setError('eFootball username cannot be empty');
+      return;
+    }
+
+    if (!jawakerUsername.trim()) {
+      setError('Jawaker username cannot be empty');
       return;
     }
     
@@ -60,7 +87,13 @@ export function Profile() {
       const res = await fetch('/api/users/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, avatar: avatar || undefined }),
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          avatar: avatar || undefined,
+          efootballUsername: efootballUsername.trim(),
+          jawakerUsername: jawakerUsername.trim(),
+          gameUsername: efootballUsername.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -191,49 +224,103 @@ export function Profile() {
           <div className="text-center md:text-left flex-1">
             <div className="flex flex-col justify-center md:justify-start gap-4 mb-1">
               {isEditing ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <input 
-                      type="text" 
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Username"
-                      className="bg-[#070B14] border border-[#6C5CE7] rounded-lg px-3 py-1 text-lg font-black w-48 md:w-64 focus:outline-none"
-                      autoFocus
-                    />
+                <div className="flex flex-col gap-3 max-w-lg">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Platform Username</label>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-500" />
+                      <input 
+                        type="text" 
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Username"
+                        className="bg-[#070B14] border border-[#6C5CE7] rounded-lg px-3 py-1.5 text-base font-bold w-full focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-gray-500" />
-                    <input 
-                      type="url" 
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value)}
-                      placeholder="Avatar URL"
-                      className="bg-[#070B14] border border-white/20 rounded-lg px-3 py-1 text-sm font-medium w-48 md:w-64 focus:outline-none focus:border-[#00D4FF]"
-                    />
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Avatar Image URL</label>
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-gray-500" />
+                      <input 
+                        type="url" 
+                        value={avatar}
+                        onChange={(e) => setAvatar(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="bg-[#070B14] border border-white/20 rounded-lg px-3 py-1.5 text-sm font-medium w-full focus:outline-none focus:border-[#00D4FF]"
+                      />
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#00D4FF] uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Gamepad2 className="w-3.5 h-3.5" /> eFootball ID *
+                      </label>
+                      <input 
+                        type="text" 
+                        value={efootballUsername}
+                        onChange={(e) => setEfootballUsername(e.target.value)}
+                        placeholder="eFootball In-Game ID"
+                        required
+                        className="bg-[#070B14] border border-[#00D4FF]/50 rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:border-[#00D4FF]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                        <Gamepad2 className="w-3.5 h-3.5" /> Jawaker ID *
+                      </label>
+                      <input 
+                        type="text" 
+                        value={jawakerUsername}
+                        onChange={(e) => setJawakerUsername(e.target.value)}
+                        placeholder="Jawaker In-Game ID"
+                        required
+                        className="bg-[#070B14] border border-purple-500/50 rounded-lg px-3 py-1.5 text-sm font-bold w-full focus:outline-none focus:border-purple-400"
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-2 mt-2">
-                    <button onClick={handleSave} disabled={saving} className="px-4 py-1.5 rounded-lg bg-[#6C5CE7] text-white flex items-center gap-2 hover:bg-[#5a4cd1] text-sm font-bold transition-colors">
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save
+                    <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl bg-[#6C5CE7] text-white flex items-center gap-2 hover:bg-[#5a4cd1] text-sm font-bold transition-colors">
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save Changes
                     </button>
-                    <button onClick={() => { setIsEditing(false); setUsername(user.username); setAvatar(user.avatar || ''); }} className="px-4 py-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 text-sm font-bold transition-colors">
+                    <button onClick={() => { 
+                      setIsEditing(false); 
+                      setUsername(user.username); 
+                      setAvatar(user.avatar || '');
+                      setEfootballUsername(user.efootballUsername || user.gameUsername || '');
+                      setJawakerUsername(user.jawakerUsername || '');
+                    }} className="px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 text-sm font-bold transition-colors">
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-4">
-                  <h1 className="text-3xl font-black">{user.username}</h1>
-                  <button onClick={() => setIsEditing(true)} className="text-gray-500 hover:text-white transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                <div>
+                  <div className="flex items-center gap-4">
+                    <h1 className="text-3xl font-black">{user.username}</h1>
+                    <button onClick={() => setIsEditing(true)} className="text-gray-500 hover:text-white transition-colors bg-white/5 p-1.5 rounded-lg border border-white/5">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-gray-400 mb-3 font-mono text-sm">{user.email}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20 text-xs font-bold uppercase tracking-wider">
+                      {user.role} TIER
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-[#00D4FF] border border-blue-500/20 text-xs font-bold font-mono">
+                      ⚽ {user.efootballUsername || user.gameUsername || 'eFootball: Not set'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-bold font-mono">
+                      🃏 {user.jawakerUsername || 'Jawaker: Not set'}
+                    </span>
+                  </div>
                 </div>
               )}
-            </div>
-            <p className="text-gray-400 mb-4 font-mono text-sm">{user.email}</p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20 text-sm font-bold uppercase tracking-wider">
-              {user.role} TIER
             </div>
             
             {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
@@ -277,7 +364,7 @@ export function Profile() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="space-y-8">
           <div>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Shield className="w-5 h-5 text-[#00D4FF]" /> Account Info</h3>
@@ -298,6 +385,40 @@ export function Profile() {
                 <span className="text-gray-400 font-medium">ID</span>
                 <span className="font-bold text-sm text-gray-500">{user.id.substring(0, 8)}...</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Gamepad2 className="w-5 h-5 text-[#6C5CE7]" /> Linked Game Accounts</h3>
+            <div className="bg-[#0F1624] border border-white/5 rounded-2xl p-6 space-y-4">
+              <div className="p-3 bg-[#070B14] border border-blue-500/20 rounded-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs uppercase font-bold text-[#00D4FF] tracking-wider">eFootball Mobile / Console</span>
+                  <span className="w-2 h-2 rounded-full bg-[#00D4FF]" />
+                </div>
+                <p className="font-mono font-bold text-white text-base truncate">
+                  {user.efootballUsername || user.gameUsername || 'Not connected'}
+                </p>
+              </div>
+
+              <div className="p-3 bg-[#070B14] border border-purple-500/20 rounded-xl">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs uppercase font-bold text-purple-400 tracking-wider">Jawaker ID</span>
+                  <span className="w-2 h-2 rounded-full bg-purple-400" />
+                </div>
+                <p className="font-mono font-bold text-white text-base truncate">
+                  {user.jawakerUsername || 'Not connected'}
+                </p>
+              </div>
+
+              <button 
+                onClick={() => setIsEditing(true)} 
+                className="w-full py-2 bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Edit2 className="w-3.5 h-3.5" /> Edit Game Identities
+              </button>
             </div>
           </div>
         </div>

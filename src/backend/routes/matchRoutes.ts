@@ -10,6 +10,7 @@ const router = Router();
 router.get('/', requireAuth, matchController.getUserMatches);
 router.get('/:id', requireAuth, matchController.getMatchById);
 router.post('/:id/room-code', requireAuth, matchController.setRoomCode);
+router.post('/:id/switch-host', requireAuth, matchController.switchHost);
 
 // Result workflows
 router.post('/:id/result', requireAuth, financialLimiter, matchResultController.submitResult);

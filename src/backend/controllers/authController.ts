@@ -5,11 +5,13 @@ import { auditLogRepository } from '../repositories/auditLogRepository';
 import { z } from 'zod';
 
 const registerSchema = z.object({
-  username: z.string().min(3).max(30),
-  email: z.string().email(),
-  gameUsername: z.string().min(1, 'Game Username is required'),
-  password: z.string().min(8),
-  confirmPassword: z.string().min(8),
+  username: z.string().min(3, 'Username must be at least 3 characters').max(30),
+  email: z.string().email('Valid email is required'),
+  efootballUsername: z.string().min(1, 'eFootball username is mandatory'),
+  jawakerUsername: z.string().min(1, 'Jawaker username is mandatory'),
+  gameUsername: z.string().optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Confirm password must be at least 8 characters'),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],

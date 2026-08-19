@@ -66,6 +66,24 @@ export class MatchController {
       res.status(400).json({ success: false, data: null, error: { code: 'MATCH_ERROR', message: error.message } });
     }
   }
+  async switchHost(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) return res.status(401).json({ success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+
+      const { id } = req.params;
+      const result = await matchService.switchHost(id, userId);
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      if (error.message === 'DATABASE_NOT_CONFIGURED') {
+        return res.status(503).json({ success: false, data: null, error: { code: 'DATABASE_NOT_CONFIGURED', message: 'Database not configured' } });
+      }
+      if (error.message.startsWith('HOST_TIMER_NOT_EXPIRED')) {
+        return res.status(400).json({ success: false, data: null, error: { code: 'HOST_TIMER_NOT_EXPIRED', message: error.message } });
+      }
+      res.status(400).json({ success: false, data: null, error: { code: 'SWITCH_HOST_ERROR', message: error.message } });
+    }
+  }
 }
 
 export const matchController = new MatchController();

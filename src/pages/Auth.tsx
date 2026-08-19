@@ -17,6 +17,8 @@ export function Auth({ type }: { type: 'login' | 'register' }) {
     identifier: '', // for login
     email: '',
     username: '',
+    efootballUsername: '',
+    jawakerUsername: '',
     gameUsername: '',
     password: '',
     confirmPassword: '',
@@ -31,17 +33,37 @@ export function Auth({ type }: { type: 'login' | 'register' }) {
     setError(null);
     setLoading(true);
 
-    if (!isLogin && formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match");
-      setLoading(false);
-      return;
+    if (!isLogin) {
+      if (!formData.efootballUsername.trim()) {
+        setError('eFootball Username / ID is mandatory');
+        setLoading(false);
+        return;
+      }
+      if (!formData.jawakerUsername.trim()) {
+        setError('Jawaker Username / ID is mandatory');
+        setLoading(false);
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords don't match");
+        setLoading(false);
+        return;
+      }
     }
 
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const payload = isLogin 
         ? { identifier: formData.identifier, password: formData.password }
-        : { username: formData.username, email: formData.email, password: formData.password, confirmPassword: formData.confirmPassword, gameUsername: formData.gameUsername };
+        : { 
+            username: formData.username.trim(), 
+            email: formData.email.trim(), 
+            efootballUsername: formData.efootballUsername.trim(),
+            jawakerUsername: formData.jawakerUsername.trim(),
+            gameUsername: formData.efootballUsername.trim(),
+            password: formData.password, 
+            confirmPassword: formData.confirmPassword 
+          };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -116,23 +138,57 @@ export function Auth({ type }: { type: 'login' | 'register' }) {
                     />
                   </div>
                 </div>
+
+                {/* Mandatory eFootball Username */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">eFootball Username</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>eFootball Username / ID</span>
+                      <span className="text-rose-400 font-bold">*</span>
+                    </label>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold uppercase tracking-wider">Mandatory</span>
+                  </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Gamepad2 className="h-5 w-5 text-gray-500" />
+                      <Gamepad2 className="h-5 w-5 text-[#00D4FF]" />
                     </div>
                     <input
                       type="text"
-                      name="gameUsername"
-                      value={formData.gameUsername}
+                      name="efootballUsername"
+                      value={formData.efootballUsername}
+                      onChange={handleChange}
+                      required
+                      className="block w-full pl-11 pr-4 py-3 bg-[#070B14] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#00D4FF] focus:ring-1 focus:ring-[#00D4FF] transition-all"
+                      placeholder="eFootball In-Game Username / ID"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Links your profile directly to your in-game eFootball identity.</p>
+                </div>
+
+                {/* Mandatory Jawaker Username */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>Jawaker Username / ID</span>
+                      <span className="text-rose-400 font-bold">*</span>
+                    </label>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold uppercase tracking-wider">Mandatory</span>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Gamepad2 className="h-5 w-5 text-[#6C5CE7]" />
+                    </div>
+                    <input
+                      type="text"
+                      name="jawakerUsername"
+                      value={formData.jawakerUsername}
                       onChange={handleChange}
                       required
                       className="block w-full pl-11 pr-4 py-3 bg-[#070B14] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all"
-                      placeholder="eFootball_Pro"
+                      placeholder="Jawaker In-Game Username / ID"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Required for matchmaking and result verification.</p>
+                  <p className="text-xs text-gray-500 mt-1">Required for matchmaking and lobby verification in Jawaker.</p>
                 </div>
               </>
             )}

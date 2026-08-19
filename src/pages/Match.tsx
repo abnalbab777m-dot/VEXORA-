@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Trophy, AlertTriangle, MessageSquare, Copy, Check, Clock, Loader2, X, FileCheck, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Trophy, AlertTriangle, MessageSquare, Copy, Check, Clock, Loader2, X, FileCheck, ThumbsUp, ThumbsDown, Gamepad2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { MatchHostCountdown } from '../components/MatchHostCountdown';
 
 export function Match() {
   const { id } = useParams();
@@ -23,40 +24,59 @@ export function Match() {
   const [formError, setFormError] = useState('');
 
   // Host State
-  const [inputRoomCode, setInputRoomCode] = useState('');
   const [submittingRoomCode, setSubmittingRoomCode] = useState(false);
   const [roomCodeError, setRoomCodeError] = useState('');
-  const [hostTimeLeft, setHostTimeLeft] = useState(0);
 
-  useEffect(() => {
-    if (matchData?.hostTimerExpiresAt && !matchData?.roomCode && matchData?.status === 'PENDING') {
-      const interval = setInterval(() => {
-        const expires = new Date(matchData.hostTimerExpiresAt).getTime();
-        const now = new Date().getTime();
-        setHostTimeLeft(Math.max(0, Math.floor((expires - now) / 1000)));
-      }, 1000);
-      return () => clearInterval(interval);
+  const fetchMatch = useCallback(async () => {
+    if (!user || !id) return;
+    try {
+      const [matchRes, resultRes] = await Promise.all([
+        fetch(`/api/matches/${id}`),
+        fetch(`/api/matches/${id}/result`)
+      ]);
+
+      const data = await matchRes.json();
+      
+      if (matchRes.ok && data.success) {
+        setMatchData(data.data);
+        
+        if (resultRes.ok) {
+          const rData = await resultRes.json();
+          if (rData.success) {
+            setResultData(rData.data);
+          }
+        }
+      } else {
+        setErrorMsg(data.error?.message || 'Failed to load match');
+      }
+    } catch (err) {
+      setErrorMsg('Network error while loading match');
+    } finally {
+      setLoading(false);
     }
-  }, [matchData?.hostTimerExpiresAt, matchData?.roomCode, matchData?.status]);
+  }, [user, id]);
 
-  const submitRoomCode = async () => {
-    if (!inputRoomCode.trim()) return;
+  const submitRoomCode = async (code: string): Promise<boolean> => {
+    if (!code.trim()) return false;
     setSubmittingRoomCode(true);
     setRoomCodeError('');
     try {
       const res = await fetch(`/api/matches/${id}/room-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode: inputRoomCode })
+        body: JSON.stringify({ roomCode: code.trim().toUpperCase() })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         setRoomCodeError(data.error?.message || 'Failed to submit room code');
+        return false;
       } else {
-        setInputRoomCode('');
+        await fetchMatch();
+        return true;
       }
     } catch (err) {
       setRoomCodeError('Network error');
+      return false;
     } finally {
       setSubmittingRoomCode(false);
     }
@@ -65,48 +85,13 @@ export function Match() {
   useEffect(() => {
     if (!user || !id) return;
 
-    let pollInterval: ReturnType<typeof setInterval>;
-    
-    const fetchMatch = async () => {
-      try {
-        const [matchRes, resultRes] = await Promise.all([
-          fetch(`/api/matches/${id}`, { headers: {  } }),
-          fetch(`/api/matches/${id}/result`, { headers: {  } })
-        ]);
-
-        const data = await matchRes.json();
-        
-        if (matchRes.ok && data.success) {
-          setMatchData(data.data);
-          
-          if (resultRes.ok) {
-            const rData = await resultRes.json();
-            if (rData.success) {
-              setResultData(rData.data);
-            }
-          }
-
-          const status = data.data.status;
-          if (status === 'COMPLETED' || status === 'CANCELLED' || status === 'DISPUTED') {
-            clearInterval(pollInterval);
-          }
-        } else {
-          setErrorMsg(data.error?.message || 'Failed to load match');
-          clearInterval(pollInterval);
-        }
-      } catch (err) {
-        setErrorMsg('Network error while loading match');
-        clearInterval(pollInterval);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchMatch();
-    pollInterval = setInterval(fetchMatch, 5000); // Poll every 5s
+    const pollInterval = setInterval(() => {
+      fetchMatch();
+    }, 4000); // Poll every 4s
 
     return () => clearInterval(pollInterval);
-  }, [id]);
+  }, [id, user, fetchMatch]);
 
   useEffect(() => {
     if (matchData?.startedAt) {
@@ -511,12 +496,18 @@ export function Match() {
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
             {/* Player 1 (Current User) */}
             <div className="flex flex-col items-center">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#6C5CE7] to-[#00D4FF] p-1 mb-4 shadow-[0_0_20px_rgba(108,92,231,0.3)]">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#6C5CE7] to-[#00D4FF] p-1 mb-3 shadow-[0_0_20px_rgba(108,92,231,0.3)]">
                 <div className="w-full h-full rounded-full bg-[#0F1624] flex items-center justify-center border-4 border-black text-xl font-black">
                   YOU
                 </div>
               </div>
               <h3 className="text-xl font-bold">{matchData.currentUserUsername}</h3>
+              {matchData.currentUserGameUsername && (
+                <div className="flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-[#00D4FF] text-xs font-mono font-bold">
+                  <Gamepad2 className="w-3 h-3" />
+                  <span>{matchData.currentUserGameUsername}</span>
+                </div>
+              )}
             </div>
 
             {/* VS & Stakes */}
@@ -530,12 +521,18 @@ export function Match() {
 
             {/* Player 2 (Opponent) */}
             <div className="flex flex-col items-center">
-              <div className="w-24 h-24 rounded-full bg-gray-800 p-1 mb-4">
+              <div className="w-24 h-24 rounded-full bg-gray-800 p-1 mb-3">
                 <div className="w-full h-full rounded-full bg-[#070B14] flex items-center justify-center border-4 border-black text-xl font-black text-gray-400">
-                  {matchData.opponentUsername.substring(0,2).toUpperCase()}
+                  {matchData.opponentUsername ? matchData.opponentUsername.substring(0,2).toUpperCase() : 'OP'}
                 </div>
               </div>
               <h3 className="text-xl font-bold">{matchData.opponentUsername}</h3>
+              {matchData.opponentGameUsername && (
+                <div className="flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-mono font-bold">
+                  <Gamepad2 className="w-3 h-3" />
+                  <span>{matchData.opponentGameUsername}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -565,38 +562,31 @@ export function Match() {
                     Enter this code in {matchData.game} to join the lobby. The game must be played with standard settings.
                   </p>
                 </>
-              ) : matchData.hostUserId === matchData.currentUser ? (
-                <div className="space-y-4">
-                  <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-lg text-sm">
-                    <p className="font-bold mb-1 flex items-center gap-2"><Clock className="w-4 h-4" /> You are the Host ({formatTime(hostTimeLeft)} left)</p>
-                    <p>Create a room in {matchData.game} and share the code below. If you fail to do so, host privileges will transfer to the opponent.</p>
-                  </div>
-                  {roomCodeError && <p className="text-red-500 text-sm">{roomCodeError}</p>}
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      value={inputRoomCode}
-                      onChange={e => setInputRoomCode(e.target.value.toUpperCase())}
-                      placeholder="ENTER ROOM CODE"
-                      className="flex-1 bg-[#0F1624] border border-white/10 rounded-lg px-4 py-3 text-white font-mono font-bold tracking-widest focus:outline-none focus:border-[#6C5CE7]"
-                      maxLength={12}
-                    />
-                    <button 
-                      onClick={submitRoomCode}
-                      disabled={submittingRoomCode || !inputRoomCode.trim()}
-                      className="px-6 bg-[#6C5CE7] hover:bg-[#5b4dcc] text-white font-bold rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {submittingRoomCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Submit'}
-                    </button>
-                  </div>
-                </div>
               ) : (
-                <div className="bg-white/5 border border-white/10 p-6 rounded-lg text-center flex flex-col items-center justify-center space-y-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#6C5CE7]" />
-                  <div>
-                    <p className="font-bold text-white mb-1">Waiting for Host</p>
-                    <p className="text-sm text-gray-400">The opponent is creating the room ({formatTime(hostTimeLeft)} left)</p>
-                  </div>
+                <div className="space-y-4">
+                  {roomCodeError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-semibold">
+                      {roomCodeError}
+                    </div>
+                  )}
+
+                  <MatchHostCountdown
+                    matchId={matchData.matchId}
+                    isHost={matchData.hostUserId === matchData.currentUser}
+                    hostUsername={matchData.hostUserId === matchData.currentUser ? matchData.currentUserUsername : matchData.opponentUsername}
+                    opponentUsername={matchData.hostUserId === matchData.currentUser ? matchData.opponentUsername : matchData.currentUserUsername}
+                    hostInGameUsername={
+                      matchData.hostUserId === matchData.currentUser
+                        ? matchData.currentUserGameUsername
+                        : matchData.opponentGameUsername
+                    }
+                    gameName={matchData.game}
+                    hostTimerExpiresAt={matchData.hostTimerExpiresAt}
+                    hostAttempts={matchData.hostAttempts || 1}
+                    onRoomCodeSubmit={submitRoomCode}
+                    onHostSwitched={fetchMatch}
+                    submittingCode={submittingRoomCode}
+                  />
                 </div>
               )}
             </div>

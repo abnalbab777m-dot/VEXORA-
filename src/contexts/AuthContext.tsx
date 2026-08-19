@@ -4,6 +4,9 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  gameUsername?: string;
+  efootballUsername?: string;
+  jawakerUsername?: string;
   role: string;
   status: string;
   avatar: string | null;

@@ -16,7 +16,13 @@ export class UserService {
     return safeUser;
   }
 
-  async updateProfile(id: string, data: { username?: string; avatar?: string }, ipAddress?: string) {
+  async updateProfile(id: string, data: { 
+    username?: string; 
+    avatar?: string; 
+    efootballUsername?: string; 
+    jawakerUsername?: string; 
+    gameUsername?: string;
+  }, ipAddress?: string) {
     if (!hasDatabase()) {
       throw new Error('Database is not configured');
     }
@@ -28,7 +34,12 @@ export class UserService {
       }
     }
 
-    const updatedUser = await userRepository.update(id, data);
+    const updatePayload: any = { ...data };
+    if (data.efootballUsername && !data.gameUsername) {
+      updatePayload.gameUsername = data.efootballUsername;
+    }
+
+    const updatedUser = await userRepository.update(id, updatePayload);
     if (!updatedUser) throw new Error('User not found');
 
     await auditLogRepository.log(id, 'PROFILE_UPDATE', JSON.stringify(data), ipAddress);

@@ -297,14 +297,23 @@ export class TelegramService {
 
   // --- Specific Pre-formatted Event Notifications ---
 
-  async notifyNewUser(user: { id?: string; username: string; email: string; gameUsername?: string; role?: string }) {
+  async notifyNewUser(user: { 
+    id?: string; 
+    username: string; 
+    email: string; 
+    efootballUsername?: string;
+    jawakerUsername?: string;
+    gameUsername?: string; 
+    role?: string 
+  }) {
     const settings = await this.getSettings();
     if (!settings.notifyUsers) return;
 
     const message = `👤 <b>مستخدم جديد انضم للمنصة!</b>\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `🏷️ <b>اسم المستخدم:</b> <code>${user.username}</code>\n` +
-      `🎮 <b>اسم اللعبة (Game ID):</b> <code>${user.gameUsername || 'غير محدد'}</code>\n` +
+      `⚽ <b>حساب eFootball:</b> <code>${user.efootballUsername || user.gameUsername || 'غير محدد'}</code>\n` +
+      `🃏 <b>حساب Jawaker:</b> <code>${user.jawakerUsername || 'غير محدد'}</code>\n` +
       `📧 <b>البريد:</b> ${user.email}\n` +
       `👑 <b>الرتبة:</b> ${user.role || 'USER'}\n` +
       `⏰ <b>الوقت:</b> ${new Date().toLocaleString('ar-EG')}`;

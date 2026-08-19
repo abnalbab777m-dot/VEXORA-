@@ -11,7 +11,7 @@ export class AuthService {
       throw new Error('Database is not configured. Registration unavailable.');
     }
 
-    const { username, email, password, gameUsername } = data;
+    const { username, email, password, efootballUsername, jawakerUsername, gameUsername } = data;
 
     const existingUser = await userRepository.findByEmailOrUsername(email, username);
     if (existingUser) {
@@ -30,7 +30,9 @@ export class AuthService {
       username,
       email,
       passwordHash,
-      gameUsername,
+      efootballUsername: efootballUsername?.trim() || '',
+      jawakerUsername: jawakerUsername?.trim() || '',
+      gameUsername: gameUsername?.trim() || efootballUsername?.trim() || '',
       role: 'USER',
       status: 'ACTIVE',
     });
@@ -46,7 +48,9 @@ export class AuthService {
         id: newUser.id,
         username,
         email,
-        gameUsername,
+        efootballUsername: newUser.efootballUsername,
+        jawakerUsername: newUser.jawakerUsername,
+        gameUsername: newUser.gameUsername,
         role: newUser.role
       }).catch(e => console.error('Telegram notification failed:', e));
     });
