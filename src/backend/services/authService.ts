@@ -11,7 +11,7 @@ export class AuthService {
       throw new Error('Database is not configured. Registration unavailable.');
     }
 
-    const { username, email, password } = data;
+    const { username, email, password, gameUsername } = data;
 
     const existingUser = await userRepository.findByEmailOrUsername(email, username);
     if (existingUser) {
@@ -30,6 +30,7 @@ export class AuthService {
       username,
       email,
       passwordHash,
+      gameUsername,
       role: 'USER',
       status: 'ACTIVE',
     });
@@ -38,6 +39,17 @@ export class AuthService {
     
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash: _, ...safeUser } = newUser;
+
+    // Async Telegram Notification
+    import('./telegramService').then(({ telegramService }) => {
+      telegramService.notifyNewUser({
+        id: newUser.id,
+        username,
+        email,
+        gameUsername,
+        role: newUser.role
+      }).catch(e => console.error('Telegram notification failed:', e));
+    });
 
     return { user: safeUser, token };
   }

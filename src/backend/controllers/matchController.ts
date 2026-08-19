@@ -20,6 +20,28 @@ export class MatchController {
     }
   }
 
+  async setRoomCode(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) return res.status(401).json({ success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+
+      const { id } = req.params;
+      const { roomCode } = req.body;
+      
+      if (!roomCode) {
+         return res.status(400).json({ success: false, data: null, error: { code: 'MISSING_ROOM_CODE', message: 'Room code is required' } });
+      }
+
+      await matchService.setRoomCode(id, userId, roomCode);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error.message === 'DATABASE_NOT_CONFIGURED') {
+        return res.status(503).json({ success: false, data: null, error: { code: 'DATABASE_NOT_CONFIGURED', message: 'Database not configured' } });
+      }
+      res.status(400).json({ success: false, data: null, error: { code: 'MATCH_ERROR', message: error.message } });
+    }
+  }
+
   async getMatchById(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.userId;

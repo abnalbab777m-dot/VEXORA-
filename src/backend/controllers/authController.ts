@@ -7,6 +7,7 @@ import { z } from 'zod';
 const registerSchema = z.object({
   username: z.string().min(3).max(30),
   email: z.string().email(),
+  gameUsername: z.string().min(1, 'Game Username is required'),
   password: z.string().min(8),
   confirmPassword: z.string().min(8),
 }).refine(data => data.password === data.confirmPassword, {

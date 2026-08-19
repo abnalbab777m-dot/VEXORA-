@@ -165,6 +165,19 @@ export class AdminDisputeService {
       
       await auditLogRepository.log(adminUserId, 'DISPUTE_RESOLVED', `Dispute ID: ${disputeId}, Resolution: ${resolution}`, undefined, tx);
       
+      // Async Telegram Notification
+      import('./telegramService').then(async ({ telegramService }) => {
+        try {
+          const { userRepository } = await import('../repositories/userRepository');
+          const adminUser = await userRepository.findById(adminUserId);
+          telegramService.notifyDisputeResolved({
+            matchId: match.id,
+            resolution,
+            adminUsername: adminUser?.username || 'Admin'
+          }).catch(e => console.error('Telegram notification failed:', e));
+        } catch (e) {}
+      });
+
       return await disputeRepository.findById(disputeId);
     });
   }

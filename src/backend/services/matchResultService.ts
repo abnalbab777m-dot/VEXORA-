@@ -120,7 +120,7 @@ export class MatchResultService {
   async disputeResult(matchId: string, userId: string, reason: string = 'Player disputed the result') {
     if (!hasDatabase()) throw new Error('DATABASE_NOT_CONFIGURED');
 
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const match = await matchRepository.findByIdForUpdate(matchId, tx);
       if (!match) throw new Error('MATCH_NOT_FOUND');
       
@@ -170,6 +170,39 @@ export class MatchResultService {
 
       return updatedResult;
     });
+
+    // Async Telegram Notification
+    import('./telegramService').then(async ({ telegramService }) => {
+      try {
+        const { matchRepository } = await import('../repositories/matchRepository');
+        const { userRepository } = await import('../repositories/userRepository');
+        const match = await matchRepository.findById(matchId);
+        
+        let raisedByUsername = userId;
+        let opponentUsername = '';
+        
+        if (match) {
+          const [raisedUser, oppUser] = await Promise.all([
+            userRepository.findById(userId),
+            userRepository.findById(match.player1Id === userId ? match.player2Id : match.player1Id)
+          ]);
+          if (raisedUser) raisedByUsername = raisedUser.username;
+          if (oppUser) opponentUsername = oppUser.username;
+        }
+
+        telegramService.notifyDispute({
+          matchId,
+          raisedBy: raisedByUsername,
+          opponent: opponentUsername,
+          gameName: match?.gameId,
+          stakeAmount: match?.stakeAmount,
+          prize: match?.prize,
+          reason
+        }).catch(e => console.error('Telegram notification failed:', e));
+      } catch (e) {}
+    });
+
+    return result;
   }
 
   async getResult(matchId: string, userId: string) {

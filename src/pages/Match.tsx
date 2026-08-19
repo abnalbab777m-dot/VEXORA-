@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export function Match() {
   const { id } = useParams();
-  const { token } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   const [matchData, setMatchData] = useState<any>(null);
@@ -22,16 +22,56 @@ export function Match() {
   const [evidenceUrl, setEvidenceUrl] = useState('');
   const [formError, setFormError] = useState('');
 
+  // Host State
+  const [inputRoomCode, setInputRoomCode] = useState('');
+  const [submittingRoomCode, setSubmittingRoomCode] = useState(false);
+  const [roomCodeError, setRoomCodeError] = useState('');
+  const [hostTimeLeft, setHostTimeLeft] = useState(0);
+
   useEffect(() => {
-    if (!token || !id) return;
+    if (matchData?.hostTimerExpiresAt && !matchData?.roomCode && matchData?.status === 'PENDING') {
+      const interval = setInterval(() => {
+        const expires = new Date(matchData.hostTimerExpiresAt).getTime();
+        const now = new Date().getTime();
+        setHostTimeLeft(Math.max(0, Math.floor((expires - now) / 1000)));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [matchData?.hostTimerExpiresAt, matchData?.roomCode, matchData?.status]);
+
+  const submitRoomCode = async () => {
+    if (!inputRoomCode.trim()) return;
+    setSubmittingRoomCode(true);
+    setRoomCodeError('');
+    try {
+      const res = await fetch(`/api/matches/${id}/room-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomCode: inputRoomCode })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setRoomCodeError(data.error?.message || 'Failed to submit room code');
+      } else {
+        setInputRoomCode('');
+      }
+    } catch (err) {
+      setRoomCodeError('Network error');
+    } finally {
+      setSubmittingRoomCode(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user || !id) return;
 
     let pollInterval: ReturnType<typeof setInterval>;
     
     const fetchMatch = async () => {
       try {
         const [matchRes, resultRes] = await Promise.all([
-          fetch(`/api/matches/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`/api/matches/${id}/result`, { headers: { Authorization: `Bearer ${token}` } })
+          fetch(`/api/matches/${id}`, { headers: {  } }),
+          fetch(`/api/matches/${id}/result`, { headers: {  } })
         ]);
 
         const data = await matchRes.json();
@@ -66,7 +106,7 @@ export function Match() {
     pollInterval = setInterval(fetchMatch, 5000); // Poll every 5s
 
     return () => clearInterval(pollInterval);
-  }, [token, id]);
+  }, [id]);
 
   useEffect(() => {
     if (matchData?.startedAt) {
@@ -96,7 +136,7 @@ export function Match() {
     try {
       const res = await fetch(`/api/matches/${id}/result`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ winnerId, score, evidenceUrl })
       });
       const data = await res.json();
@@ -118,7 +158,7 @@ export function Match() {
     try {
       const res = await fetch(`/api/matches/${id}/confirm`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {  }
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -139,7 +179,7 @@ export function Match() {
     try {
       const res = await fetch(`/api/matches/${id}/settle`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {  }
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -162,7 +202,7 @@ export function Match() {
     try {
       const res = await fetch(`/api/matches/${id}/dispute`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {  }
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -507,20 +547,58 @@ export function Match() {
             
             <div className="bg-[#070B14] border border-white/10 rounded-xl p-6">
               <p className="text-gray-400 mb-2 font-medium">In-Game Room Code</p>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-[#0F1624] border border-white/10 rounded-lg flex items-center justify-center font-mono text-2xl font-bold tracking-[0.2em] py-3">
-                  {matchData.roomCode}
+              
+              {matchData.roomCode ? (
+                <>
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-[#0F1624] border border-white/10 rounded-lg flex items-center justify-center font-mono text-2xl font-bold tracking-[0.2em] py-3">
+                      {matchData.roomCode}
+                    </div>
+                    <button 
+                      onClick={copyCode}
+                      className="w-16 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center justify-center transition-colors"
+                    >
+                      {copied ? <Check className="w-6 h-6 text-[#22C55E]" /> : <Copy className="w-6 h-6 text-gray-400" />}
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-4 leading-relaxed">
+                    Enter this code in {matchData.game} to join the lobby. The game must be played with standard settings.
+                  </p>
+                </>
+              ) : matchData.hostUserId === matchData.currentUser ? (
+                <div className="space-y-4">
+                  <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-lg text-sm">
+                    <p className="font-bold mb-1 flex items-center gap-2"><Clock className="w-4 h-4" /> You are the Host ({formatTime(hostTimeLeft)} left)</p>
+                    <p>Create a room in {matchData.game} and share the code below. If you fail to do so, host privileges will transfer to the opponent.</p>
+                  </div>
+                  {roomCodeError && <p className="text-red-500 text-sm">{roomCodeError}</p>}
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={inputRoomCode}
+                      onChange={e => setInputRoomCode(e.target.value.toUpperCase())}
+                      placeholder="ENTER ROOM CODE"
+                      className="flex-1 bg-[#0F1624] border border-white/10 rounded-lg px-4 py-3 text-white font-mono font-bold tracking-widest focus:outline-none focus:border-[#6C5CE7]"
+                      maxLength={12}
+                    />
+                    <button 
+                      onClick={submitRoomCode}
+                      disabled={submittingRoomCode || !inputRoomCode.trim()}
+                      className="px-6 bg-[#6C5CE7] hover:bg-[#5b4dcc] text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {submittingRoomCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Submit'}
+                    </button>
+                  </div>
                 </div>
-                <button 
-                  onClick={copyCode}
-                  className="w-16 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center justify-center transition-colors"
-                >
-                  {copied ? <Check className="w-6 h-6 text-[#22C55E]" /> : <Copy className="w-6 h-6 text-gray-400" />}
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mt-4 leading-relaxed">
-                Enter this code in {matchData.game} to join the lobby. The game must be played with standard settings.
-              </p>
+              ) : (
+                <div className="bg-white/5 border border-white/10 p-6 rounded-lg text-center flex flex-col items-center justify-center space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#6C5CE7]" />
+                  <div>
+                    <p className="font-bold text-white mb-1">Waiting for Host</p>
+                    <p className="text-sm text-gray-400">The opponent is creating the room ({formatTime(hostTimeLeft)} left)</p>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="flex gap-4">

@@ -33,7 +33,10 @@ export class MatchmakingService {
       const stakeAmount = Number(stake.amount);
       const commission = stakeAmount * 0.15;
       const prize = (stakeAmount * 2) - commission;
-      const roomCode = this.generateRoomCode();
+      
+      const isPlayer1Host = Math.random() > 0.5;
+      const hostUserId = isPlayer1Host ? player1Id : player2Id;
+      const hostTimerExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
       // Lock wallets
       const p1Wallet = await walletRepository.findByUserIdForUpdate(player1Id, tx);
@@ -84,7 +87,10 @@ export class MatchmakingService {
         prize: prize.toString(),
         commission: commission.toString(),
         status: 'READY',
-        roomCode,
+        roomCode: null,
+        hostUserId,
+        hostTimerExpiresAt,
+        hostAttempts: 1,
       }).returning();
 
       return match;
@@ -153,7 +159,6 @@ export class MatchmakingService {
         }, tx);
 
         // 2. Create Match
-        const roomCode = this.generateRoomCode();
         
         // Prize pool calculation (simulated for now based on rules)
         // Usually it's stake * 2 - commission (e.g. 25% of one stake? Or 25% of winnings?)
@@ -163,6 +168,10 @@ export class MatchmakingService {
         const prizeNum = stakeAmountNum * 1.8;
         const commNum = stakeAmountNum * 0.2;
 
+        const isPlayer1Host = Math.random() > 0.5;
+        const hostUserId = isPlayer1Host ? opponent.userId : userId;
+        const hostTimerExpiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+
         const match = await matchRepository.create({
           gameId,
           player1Id: opponent.userId,
@@ -171,7 +180,10 @@ export class MatchmakingService {
           prize: prizeNum.toFixed(2),
           commission: commNum.toFixed(2),
           status: 'PENDING',
-          roomCode,
+          roomCode: null,
+          hostUserId,
+          hostTimerExpiresAt,
+          hostAttempts: 1,
         }, tx);
 
         await auditLogRepository.log(userId, 'MATCHMAKING_JOINED', `Game: ${gameId}, Stake: ${stake.amount}`, undefined, tx);
@@ -243,7 +255,7 @@ export class MatchmakingService {
     for (const { lobby } of lobbiesWithStats) {
       try {
         const result = await this.join(userId, lobby.gameId, lobby.stakeId, lobby.region || undefined);
-        if (result.match) {
+        if ('match' in result && result.match) {
            return result;
         }
       } catch (err: any) {

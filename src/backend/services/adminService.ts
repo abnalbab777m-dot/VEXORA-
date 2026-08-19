@@ -10,6 +10,34 @@ export class AdminService {
     return await adminRepository.getDashboardStats();
   }
 
+  async updateUserBalance(userId: string, newBalance: number) {
+    if (!hasDatabase()) throw new Error('DATABASE_NOT_CONFIGURED');
+    const { wallets, walletTransactions } = await import('../../db/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    return await db.transaction(async (tx) => {
+      const wallet = await tx.select().from(wallets).where(eq(wallets.userId, userId)).limit(1).for('update').then(r => r[0]);
+      if (!wallet) throw new Error('WALLET_NOT_FOUND');
+      
+      const balanceBefore = wallet.balance;
+      const amount = (newBalance - Number(wallet.balance)).toString();
+      
+      await tx.update(wallets).set({ balance: newBalance.toString() }).where(eq(wallets.id, wallet.id));
+      
+      await tx.insert(walletTransactions).values({
+        userId,
+        walletId: wallet.id,
+        type: 'ADMIN_ADJUSTMENT',
+        amount,
+        balanceBefore,
+        balanceAfter: newBalance.toString(),
+        status: 'COMPLETED'
+      });
+      
+      return { success: true };
+    });
+  }
+
   async getUsers(search: string = '', status: string = 'ALL', role: string = 'ALL', page: number = 1, limit: number = 20) {
     if (!hasDatabase()) throw new Error('DATABASE_NOT_CONFIGURED');
     const safeLimit = Math.min(Math.max(1, limit), 100);

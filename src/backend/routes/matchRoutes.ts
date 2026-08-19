@@ -9,6 +9,7 @@ const router = Router();
 
 router.get('/', requireAuth, matchController.getUserMatches);
 router.get('/:id', requireAuth, matchController.getMatchById);
+router.post('/:id/room-code', requireAuth, matchController.setRoomCode);
 
 // Result workflows
 router.post('/:id/result', requireAuth, financialLimiter, matchResultController.submitResult);

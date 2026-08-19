@@ -73,7 +73,7 @@ export class AdminController {
   getTelegramSettings = async (req: Request, res: Response) => {
     try {
       const { telegramService } = await import('../services/telegramService');
-      const settings = await telegramService.getSettings();
+      const settings = await telegramService.getSettings(true);
       res.json({ success: true, data: settings });
     } catch (error: any) {
       res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_ERROR', message: error.message } });
@@ -82,10 +82,18 @@ export class AdminController {
 
   saveTelegramSettings = async (req: Request, res: Response) => {
     try {
-      const { botToken, chatId } = req.body;
+      const { botToken, chatId, enabled, notifyUsers, notifyDeposits, notifyWithdrawals, notifyDisputes } = req.body;
       const { telegramService } = await import('../services/telegramService');
-      await telegramService.saveSettings(botToken || '', chatId || '');
-      res.json({ success: true });
+      const updatedSettings = await telegramService.saveSettings({
+        botToken,
+        chatId,
+        enabled,
+        notifyUsers,
+        notifyDeposits,
+        notifyWithdrawals,
+        notifyDisputes
+      });
+      res.json({ success: true, data: updatedSettings });
     } catch (error: any) {
       res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_ERROR', message: error.message } });
     }
@@ -93,9 +101,13 @@ export class AdminController {
 
   testTelegramNotification = async (req: Request, res: Response) => {
     try {
+      const { botToken, chatId } = req.body || {};
       const { telegramService } = await import('../services/telegramService');
-      const data = await telegramService.sendMessage("🔔 اختبار ناجح: بوت نكسورا متصل بلوحة التحكم بنجاح");
-      res.json({ success: true, data });
+      const result = await telegramService.testConnection(botToken, chatId);
+      if (!result.success) {
+        return res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_TEST_FAILED', message: result.error, botInfo: result.botInfo } });
+      }
+      res.json({ success: true, data: result });
     } catch (error: any) {
       res.status(400).json({ success: false, data: null, error: { code: 'TELEGRAM_ERROR', message: error.message } });
     }
@@ -108,6 +120,23 @@ export class AdminController {
     } catch (error: any) {
       if (error.message === 'DATABASE_NOT_CONFIGURED' || error.message.includes('Database is not configured')) {
         return res.status(503).json({ success: false, data: null, error: { code: 'DATABASE_NOT_CONFIGURED', message: 'Database not configured. Running in Demo Mode.' } });
+      }
+      this.handleErr(res, error);
+    }
+  }
+
+  updateUserBalance = async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const { balance } = req.body;
+      if (balance === undefined || isNaN(Number(balance))) {
+        return res.status(400).json({ success: false, data: null, error: { code: 'INVALID_BALANCE', message: 'Valid balance is required' } });
+      }
+      const data = await adminService.updateUserBalance(userId, Number(balance));
+      res.json({ success: true, data });
+    } catch (error: any) {
+      if (error.message === 'DATABASE_NOT_CONFIGURED') {
+        return res.status(503).json({ success: false, data: null, error: { code: 'DATABASE_NOT_CONFIGURED', message: 'Database not configured' } });
       }
       this.handleErr(res, error);
     }

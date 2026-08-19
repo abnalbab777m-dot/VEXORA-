@@ -5,7 +5,7 @@ import { Loader2, Swords, X, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Matchmaking() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const gameId = searchParams.get('gameId');
@@ -36,7 +36,7 @@ export function Matchmaking() {
   }, [status]);
 
   useEffect(() => {
-    if (!token || status === 'INVITE_PENDING') return;
+    if (!user || status === 'INVITE_PENDING') return;
     
     // Polling logic
     let pollInterval: ReturnType<typeof setInterval>;
@@ -44,7 +44,7 @@ export function Matchmaking() {
     const checkStatus = async () => {
       try {
         const res = await fetch('/api/matchmaking/status', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: {  }
         });
         const data = await res.json();
         
@@ -69,7 +69,7 @@ export function Matchmaking() {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}` 
+                 
               },
               body: JSON.stringify({ gameId, stakeId })
             });
@@ -93,13 +93,13 @@ export function Matchmaking() {
     pollInterval = setInterval(checkStatus, 3000); // poll every 3s
     
     return () => clearInterval(pollInterval);
-  }, [token, gameId, stakeId]);
+  }, [gameId, stakeId]);
 
   const handleCancel = async () => {
     try {
       const res = await fetch('/api/matchmaking/cancel', {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {  }
       });
       if (res.ok) {
         navigate('/games');
@@ -116,7 +116,7 @@ export function Matchmaking() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` 
+           
         },
         body: JSON.stringify({ accept })
       });
@@ -234,9 +234,6 @@ export function Matchmaking() {
               <div className="bg-black/30 p-4 rounded-xl my-6 border border-white/5">
                 <p className="text-sm text-gray-400 uppercase tracking-wider mb-1">Game</p>
                 <p className="font-bold mb-4">{matchData.game}</p>
-                
-                <p className="text-sm text-gray-400 uppercase tracking-wider mb-1">Room Code</p>
-                <p className="font-mono text-3xl font-bold tracking-widest text-white">{matchData.roomCode}</p>
               </div>
 
               <button 

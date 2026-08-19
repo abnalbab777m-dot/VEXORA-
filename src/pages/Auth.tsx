@@ -17,6 +17,7 @@ export function Auth({ type }: { type: 'login' | 'register' }) {
     identifier: '', // for login
     email: '',
     username: '',
+    gameUsername: '',
     password: '',
     confirmPassword: '',
   });
@@ -40,7 +41,7 @@ export function Auth({ type }: { type: 'login' | 'register' }) {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const payload = isLogin 
         ? { identifier: formData.identifier, password: formData.password }
-        : { username: formData.username, email: formData.email, password: formData.password, confirmPassword: formData.confirmPassword };
+        : { username: formData.username, email: formData.email, password: formData.password, confirmPassword: formData.confirmPassword, gameUsername: formData.gameUsername };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -97,23 +98,43 @@ export function Auth({ type }: { type: 'login' | 'register' }) {
             )}
 
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">Username</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <UserIcon className="h-5 w-5 text-gray-500" />
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">Username</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <UserIcon className="h-5 w-5 text-gray-500" />
+                    </div>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      required
+                      className="block w-full pl-11 pr-4 py-3 bg-[#070B14] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all"
+                      placeholder="Faker_99"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    required
-                    className="block w-full pl-11 pr-4 py-3 bg-[#070B14] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all"
-                    placeholder="Faker_99"
-                  />
                 </div>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-wider">eFootball Username</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Gamepad2 className="h-5 w-5 text-gray-500" />
+                    </div>
+                    <input
+                      type="text"
+                      name="gameUsername"
+                      value={formData.gameUsername}
+                      onChange={handleChange}
+                      required
+                      className="block w-full pl-11 pr-4 py-3 bg-[#070B14] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7] transition-all"
+                      placeholder="eFootball_Pro"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Required for matchmaking and result verification.</p>
+                </div>
+              </>
             )}
             
             {isLogin ? (

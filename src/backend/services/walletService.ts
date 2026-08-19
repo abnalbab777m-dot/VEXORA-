@@ -77,7 +77,7 @@ export class WalletService {
     const depositAmount = new Decimal(amount);
     if (depositAmount.lte(0)) throw new Error('Amount must be greater than zero');
 
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       let wallet = await walletRepository.findByUserIdForUpdate(userId, tx);
       if (!wallet) wallet = await walletRepository.create(userId, tx);
       const existing = await walletTransactionRepository.findByIdempotencyKey(idempotencyKey, tx);
@@ -98,6 +98,26 @@ export class WalletService {
       await auditLogRepository.log(userId, 'DEPOSIT_REQUEST', `Amount: ${amount}, Ref: ${idempotencyKey}`, undefined, tx);
       return transaction;
     });
+
+    // Async Telegram Notification
+    import('./telegramService').then(async ({ telegramService }) => {
+      let username = userId;
+      try {
+        const { userRepository } = await import('../repositories/userRepository');
+        const user = await userRepository.findById(userId);
+        if (user) username = user.username;
+      } catch (e) {}
+      
+      telegramService.notifyDepositRequest({
+        userId,
+        username,
+        amount,
+        referenceId: idempotencyKey,
+        method: metadata?.paymentMethodName || metadata?.type || 'Online / Crypto / Bank'
+      }).catch(e => console.error('Telegram notification failed:', e));
+    });
+
+    return result;
   }
 
   async createWithdrawalRequest(userId: string, amount: string, idempotencyKey: string, metadata?: any) {
@@ -106,7 +126,7 @@ export class WalletService {
     const withdrawAmount = new Decimal(amount);
     if (withdrawAmount.lte(0)) throw new Error('Amount must be greater than zero');
 
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       let wallet = await walletRepository.findByUserIdForUpdate(userId, tx);
       if (!wallet) wallet = await walletRepository.create(userId, tx);
       const existing = await walletTransactionRepository.findByIdempotencyKey(idempotencyKey, tx);
@@ -140,6 +160,26 @@ export class WalletService {
       await auditLogRepository.log(userId, 'WITHDRAWAL_REQUEST', `Amount: ${amount}, Ref: ${idempotencyKey}`, undefined, tx);
       return transaction;
     });
+    
+    // Async Telegram Notification
+    import('./telegramService').then(async ({ telegramService }) => {
+      let username = userId;
+      try {
+        const { userRepository } = await import('../repositories/userRepository');
+        const user = await userRepository.findById(userId);
+        if (user) username = user.username;
+      } catch (e) {}
+
+      telegramService.notifyWithdrawalRequest({
+        userId,
+        username,
+        amount,
+        referenceId: idempotencyKey,
+        details: metadata
+      }).catch(e => console.error('Telegram notification failed:', e));
+    });
+
+    return result;
   }
 
   async lockFunds(userId: string, amount: string, referenceId: string, outerTx?: any) {
@@ -403,6 +443,31 @@ export class WalletService {
         details: JSON.stringify({ transactionId, type: transaction.type, amount: transaction.amount })
       });
 
+      // Async Telegram Notification
+      import('./telegramService').then(async ({ telegramService }) => {
+        try {
+          const { userRepository } = await import('../repositories/userRepository');
+          const user = await userRepository.findById(transaction.userId);
+          const username = user?.username || transaction.userId;
+
+          if (transaction.type === 'DEPOSIT') {
+            telegramService.notifyDepositStatus({
+              userId: transaction.userId,
+              username,
+              amount: transaction.amount,
+              status: 'APPROVED'
+            }).catch(e => console.error('Telegram notification failed:', e));
+          } else if (transaction.type === 'WITHDRAW') {
+            telegramService.notifyWithdrawalStatus({
+              userId: transaction.userId,
+              username,
+              amount: transaction.amount,
+              status: 'APPROVED'
+            }).catch(e => console.error('Telegram notification failed:', e));
+          }
+        } catch (e) {}
+      });
+
       return { success: true };
     });
   }
@@ -425,7 +490,7 @@ export class WalletService {
           const newLocked = Number(wallet.lockedBalance) - amount;
           await tx.update(wallets)
             .set({ 
-              availableBalance: newAvailable.toString(),
+              availableBalance: newAvailable.toString(), 
               lockedBalance: newLocked.toString(),
               updatedAt: new Date()
             })
@@ -448,6 +513,33 @@ export class WalletService {
         userId: adminId,
         action: 'REJECT_TRANSACTION',
         details: JSON.stringify({ transactionId, type: transaction.type, amount: transaction.amount, reason })
+      });
+
+      // Async Telegram Notification
+      import('./telegramService').then(async ({ telegramService }) => {
+        try {
+          const { userRepository } = await import('../repositories/userRepository');
+          const user = await userRepository.findById(transaction.userId);
+          const username = user?.username || transaction.userId;
+
+          if (transaction.type === 'DEPOSIT') {
+            telegramService.notifyDepositStatus({
+              userId: transaction.userId,
+              username,
+              amount: transaction.amount,
+              status: 'REJECTED',
+              reason
+            }).catch(e => console.error('Telegram notification failed:', e));
+          } else if (transaction.type === 'WITHDRAW') {
+            telegramService.notifyWithdrawalStatus({
+              userId: transaction.userId,
+              username,
+              amount: transaction.amount,
+              status: 'REJECTED',
+              reason
+            }).catch(e => console.error('Telegram notification failed:', e));
+          }
+        } catch (e) {}
       });
 
       return { success: true };
@@ -507,9 +599,29 @@ export class WalletService {
         message: `Your balance was ${type === 'CREDIT' ? 'credited' : 'debited'} by $${amount}. Reason: ${reason}`,
       });
 
+      // Async Telegram Notification
+      import('./telegramService').then(async ({ telegramService }) => {
+        try {
+          const { userRepository } = await import('../repositories/userRepository');
+          const [targetUser, adminUser] = await Promise.all([
+            userRepository.findById(userId),
+            userRepository.findById(adminId)
+          ]);
+          
+          telegramService.notifyAdminAdjustment({
+            targetUsername: targetUser?.username || userId,
+            type,
+            amount: amount.toString(),
+            adminUsername: adminUser?.username || 'Admin',
+            reason,
+            newBalance: newBalance.toString()
+          }).catch(e => console.error('Telegram notification failed:', e));
+        } catch (e) {}
+      });
+
       return { success: true, newBalance };
     });
   }
-
 }
+
 export const walletService = new WalletService();

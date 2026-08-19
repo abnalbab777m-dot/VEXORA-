@@ -5,7 +5,7 @@ import { Wallet, Trophy, Swords, Target, TrendingUp, History, ArrowUpRight, Load
 import { useAuth } from '../contexts/AuthContext';
 
 export function Dashboard() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<any[]>([]);
   const [wallet, setWallet] = useState<any>(null);
@@ -14,12 +14,12 @@ export function Dashboard() {
   const [quickJoinLoading, setQuickJoinLoading] = useState(false);
 
   const handleQuickJoin = async () => {
-    if (!token) return;
+    if (!user) return;
     setQuickJoinLoading(true);
     try {
       const res = await fetch('/api/matchmaking/quick-join', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {}
       });
       const data = await res.json();
       if (data.success && data.data.match) {
@@ -35,13 +35,13 @@ export function Dashboard() {
   };
 
   useEffect(() => {
-    if (!token || !user) return;
+    if (!user) return;
     const fetchData = async () => {
       try {
         const [matchRes, walletRes, statsRes] = await Promise.all([
-          fetch('/api/matches', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/wallet', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/statistics/me', { headers: { Authorization: `Bearer ${token}` } })
+          fetch('/api/matches'),
+          fetch('/api/wallet'),
+          fetch('/api/statistics/me')
         ]);
         
         if (matchRes.ok) {
@@ -65,7 +65,7 @@ export function Dashboard() {
       }
     };
     fetchData();
-  }, [token, user]);
+  }, [user]);
 
   const getStatusDisplay = (match: any) => {
     const status = match.status;

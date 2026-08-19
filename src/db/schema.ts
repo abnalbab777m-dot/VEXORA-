@@ -4,6 +4,7 @@ import { relations } from 'drizzle-orm';
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: text('username').notNull().unique(),
+  gameUsername: text('game_username').notNull().default(''),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: text('role').notNull().default('USER'), // USER or ADMIN
@@ -101,6 +102,9 @@ export const matches = pgTable('matches', {
   commission: decimal('commission', { precision: 12, scale: 2 }).notNull(),
   status: text('status').notNull().default('PENDING'), // PENDING, READY, LIVE, RESULT_SUBMITTED, UNDER_REVIEW, COMPLETED, CANCELLED, DISPUTED
   roomCode: text('room_code'),
+  hostUserId: uuid('host_user_id').references(() => users.id),
+  hostTimerExpiresAt: timestamp('host_timer_expires_at'),
+  hostAttempts: integer('host_attempts').default(0),
   winnerId: uuid('winner_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   startedAt: timestamp('started_at'),
